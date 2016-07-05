@@ -1,0 +1,19 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: MyString
+  chargebee_id: MyString
+  chargebee_plan: MyString
+  quantity: 1
+  trial_ends_at: 2016-01-25 01:27:43
+  ends_at: 2016-01-25 01:27:43
+  customer_id: 1
+
+two:
+  name: MyString
+  chargebee_id: MyString
+  chargebee_plan: MyString
+  quantity: 1
+  trial_ends_at: 2016-01-25 01:27:43
+  ends_at: 2016-01-25 01:27:43
+  customer_id: 1

@@ -1,0 +1,322 @@
+<script type="text/javascript" src="https://js.chargebee.com/v1/chargebee.js"></script>
+<script src="https://checkout.stripe.com/checkout.js"></script>
+<script src="https://js.braintreegateway.com/v2/braintree.js"></script>
+<div>
+  <div class="navbar navbar-static-top">
+    <div class="container">
+      <div class="navbar-header">
+        <div class="h1">Subscriber Information</div>
+        <div class="pull-right">
+          <%= link_to "Back", customers_path %>
+          <% if @customer.subscription.status == "in_trial" && (@customer.subscription.payment_method.nil? || (@customer.subscription.payment_method.present? && @customer.subscription.payment_method.status != "valid")) %>
+            <div class="text-center" style="background-color: #eee">
+              <div class="container">
+                <h2><small>Hi</small> <%= @customer.first_name %>,</h2>
+                <span class="text-muted">Your subscription is currently in</span> trial.<br><br>
+                <span class="text-muted">Do you want to upgrade your subscription to take full advantage of all our features? <br><br>
+                Click on </span>"Upgrade" <span class="text-muted">to enter your credit card details and upgrade to a paid subscription.</span><br><br>
+                <form action="/customers/<%= @customer.id %>/hosted_page_checkout_existing" method="post" id="hosted-page-subscribe-form" class="subscribe-form">
+                    <!-- We have hard-coded the subscription id.
+                    It should be the subscription id of the user who has logged-in-->
+                    <input type="submit" class="btn btn-success" value="Hosted Page Upgrade" />
+                </form>
+                <br>
+                <form action="/customers/<%= @customer.id %>/checkout_existing" method="post" id="stripe-subscribe-form" class="subscribe-form">
+                  <!-- We have hard-coded the subscription id.
+                  It should be the subscription id of the user who has logged-in-->
+                  <input type="hidden" name="stripeToken" value="" />
+                  <input type="hidden" name="payment_gateway" value="stripe" />
+                  <input type="submit" class="btn btn-success" value="Stripe Upgrade" />
+                </form>
+                <br>
+              </div>
+            </div>
+          <% end %>
+          <span class="subscribe-process process" style="display:none;">Processing&hellip;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="row">
+      <div class="col-sm-7">
+        <table class="table table-striped">
+          <tr>
+            <td><b>Name:</b> </td>
+            <td><%= @subscriber.first_name %> <%= @subscriber.last_name %></td>
+          </tr>
+          <tr>
+            <td><b>Email:</b></td>
+            <td><%= @subscriber.email %></td>
+          </tr>
+          <tr>
+            <td><b>Phone:</b></td> 
+            <td><%= @subscriber.phone %></td>
+          </tr>
+          <tr>
+            <td><b>Subscribed To:</b> </td>
+            <td><%= @customer.subscription.plan.name %></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <% if @subscriber.billing_address %>
+            <tr>
+              <td><b>Billing Info:</b> </td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>Name: </td>
+              <td><%= @subscriber.billing_address.first_name %> <%= @subscriber.billing_address.last_name %></td>
+            </tr>
+            <tr>
+              <td>City: </td>
+              <td><%= @subscriber.billing_address.city %></td>
+            </tr>
+            <tr>
+              <td>State: </td>
+              <td><%= @subscriber.billing_address.state %></td>
+            </tr>
+            <tr>
+              <td>Country: </td>
+              <td><%= @subscriber.billing_address.country %></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+            </tr>
+          <% end %>
+          <% if @subscriber.contacts %>
+            <tr>
+              <td><b>Contacts:</b> </td>
+              <td></td>
+            </tr>
+            <% @subscriber.contacts.each do |contact| %>
+              <tr>
+                <td>Name: </td>
+                <td><%= contact.first_name %> <%= contact.last_name %></td>
+              </tr>
+              <tr>
+                <td>Eamil: </td>
+                <td><%= contact.email %></td>
+              </tr>
+              <tr>
+                <td>Label: </td>
+                <td><%= contact.label %></td>
+              </tr>
+              <tr>
+                <td>Country: </td>
+                <td><%= @subscriber.billing_address.country %></td>
+              </tr>
+            <% end %>
+            <tr>
+              <td></td>
+              <td></td>
+            </tr>
+          <% end %>
+          <% if @subscriber.payment_method %>
+            <tr>
+              <td><b>Payment Info:</b> </td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>Type: </td>
+              <td><%= @subscriber.payment_method.type %></td>
+            </tr>
+            <tr>
+              <td>Gateway: </td>
+              <td><%= @subscriber.payment_method.gateway %></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+            </tr>
+          <% end %>
+          <% unless (@subscriber.card_status == 'no_card' || @customer.subscription.payment_method.nil?) %>
+            <tr>
+              <td><b>Card Info:</b> </td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>Type: </td>
+              <td><%= @customer.subscription.payment_method.card_type %></td>
+            </tr>
+            <tr>
+              <td>Last four: </td>
+              <td><%= @customer.subscription.payment_method.card_last4 %></td>
+            </tr>
+            <tr>
+              <td>Status: </td>
+              <td><%= @customer.subscription.payment_method.status %></td>
+            </tr>
+            <tr>
+              <% unless @customer.subscription.status == "cancelled" || @customer.subscription.status == "non_renewing" %>
+              <td><a href="/customers/cancel_subscription/<%= @customer.subscription.chargebee_id %>/false" >Cancel subscription immediately</a></td>
+              <td><a href="/customers/cancel_subscription/<%= @customer.subscription.chargebee_id %>/true" >Cancel subscription on next renewal</a></td>
+              <% end %>
+            </tr>
+          <% end %>
+        </table>
+        <% if @subscriber.payment_method.present? && @customer.subscription.status != "cancelled" %>
+
+            <form action="/customers/<%= @customer.id %>/hosted_page_checkout_existing" method="post" id="hosted-page-subscribe-form" class="subscribe-form">
+                <!-- We have hard-coded the subscription id.
+                It should be the subscription id of the user who has logged-in-->
+                <input type="submit" class="btn btn-success" value="Chargebee card update" />
+                </p>
+            </form>
+
+            <form action="/customers/<%= @customer.id %>/checkout_existing" method="post" id="stripe-subscribe-form" class="subscribe-form">
+                <!-- We have hard-coded the subscription id.
+                It should be the subscription id of the user who has logged-in-->
+                <input type="hidden" name="payment_gateway" value="stripe" />
+                <input type="hidden" name="stripeToken" value="" />
+                <input type="submit" class="btn btn-success" value="Stripe card update" />
+                </p>
+            </form>
+
+            <input type="Button" class="braintree_content btn btn-success" value="Braintree card update" />
+            </p>
+            <form action="/customers/<%= @customer.id %>/checkout_existing" method="post" id="braintree-subscribe-form" class="subscribe-form">
+              <div class="row braintree-payment" style="display:none;">
+                <h3 class="page-header">Payment Information</h3>
+                <div class="row">
+                  <div class="col-sm-12">
+                    <div class="form-group">
+                      <label for="card_no">Credit Card Number</label>
+                      <div class="row">
+                        <div class="col-sm-6">
+                          <input type="text" class="card-number form-control" card-info="number" required data-msg-required="cannot be blank">
+                        </div>
+                        <div class="col-sm-6">
+                          <span class="cb-cards hidden-xs">
+                            <span class="visa">  </span>
+                            <span class="mastercard">  </span>
+                            <span class="american_express">  </span>
+                            <span class="discover">  </span>
+                          </span>
+                        </div>
+                      </div>
+                      <small for="card_no" class="text-danger"></small>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-sm-6">
+                    <div class="form-group">
+                      <label for="card[expiry_year]">Card Expiry</label>
+                      <div class="row">
+                        <div class="col-xs-6">
+
+                          <select class="card-expiry-month form-control" card-info="expiry_month" 
+                          required data-msg-required="empty">
+                          <option selected>01</option>
+                          <option>02</option>
+                          <option>03</option>
+                          <option>04</option>
+                          <option>05</option>
+                          <option>06</option>
+                          <option>07</option>
+                          <option>08</option>
+                          <option>09</option>
+                          <option>10</option>
+                          <option>11</option>
+                          <option>12</option>
+                        </select>
+                      </div>
+                      <div class="col-xs-6">
+                        <select class="card-expiry-year form-control" card-info="expiry_year" 
+                        required data-msg-required="empty">
+                        <option>2014</option>
+                        <option>2015</option>
+                        <option>2016</option>
+                        <option>2017</option>
+                        <option>2018</option>
+                        <option>2019</option>
+                        <option selected="">2020</option>
+                        <option>2021</option>
+                        <option>2022</option>
+                        <option>2023</option>
+                      </select>
+                    </div>
+                  </div> 
+                  <small for="card[expiry_year]" class="text-danger"></small>
+                  <small for="card[expiry_month]" class="text-danger"></small>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="form-group">
+                  <label for="ccv">CVV</label>
+                  <div class="row">
+                    <div class="col-xs-6">
+
+                      <input type="text" class="card-cvc form-control" card-info="cvv"
+                      placeholder="CVV" required data-msg-required="empty">
+
+                    </div>
+                    <div class="col-xs-6">
+                      <h6 class="cb-cvv"><small>(Last 3-4 digits)</small></h6>
+                    </div>
+                  </div>
+                  <small for="cvc" class="text-danger"></small>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <div class="form-inline">
+              <p><small class="text-danger" style="display:none;">There were errors while submitting</small></p>
+              <div class="form-group">
+                <input type="hidden" name="payment_gateway" value="braintree" />
+                <input id="submit-btn" type="submit" class="btn btn-success btn-lg pull-left" value="Proceed to update">
+              </div>&nbsp;&nbsp;
+              <div class="form-group">
+                <%= link_to 'Cancel', customers_path %>
+              </div>&nbsp;&nbsp;
+              <span class="subscribe-process process" style="display:none;">Processing&hellip;</span>
+              <small class="alert-danger text-danger"></small>
+              </p>
+            </div>
+           </form>
+        <% end %>        
+      </div>      
+    </div>
+    <div class="col-sm-5">
+      <table class="table table-striped">
+        <thead>
+          <th>Invoice #</th>
+          <th>Date</th>
+        </thead>
+        <tbody>
+          <% if @customer.invoices.length > 0 %>
+            <% @customer.invoices.each do |invoice| %>
+            <tr>
+              <td><%= invoice.id %></td>
+              <td><%= Time.at(invoice.start_date).strftime("%F") if invoice.start_date.present? %></td>
+            </tr>            
+            <% end %>
+          <% else %>
+              <td>No invoices</td>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="paymentModal" tabindex="-1" role="dialog" aria-labelledby="paymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="max-width: 540px;">
+      <div class="modal-header">
+        <h4 class="modal-title text-center">
+          Payment Information
+        </h4>
+      </div>
+      <div class="modal-body"  data-cb-modal-body="body" style="padding-left: 0px;padding-right: 0px;">
+      </div>
+    </div> 
+  </div>
+</div>
+
+<%= render 'show_script' %>

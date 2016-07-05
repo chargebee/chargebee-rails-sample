@@ -1,0 +1,17 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  cb_customer_id: MyString
+  last4: MyString
+  card_type: MyString
+  status: MyString
+  event_last_modified_at: 2016-06-15 10:40:19
+  subscription_id: 
+
+two:
+  cb_customer_id: MyString
+  last4: MyString
+  card_type: MyString
+  status: MyString
+  event_last_modified_at: 2016-06-15 10:40:19
+  subscription_id: 

@@ -1,0 +1,23 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  cb_customer_id: MyString
+  auto_collection: false
+  payment_type: MyString
+  reference_id: MyString
+  card_last4: MyString
+  card_type: MyString
+  status: MyString
+  event_last_modified_at: 2016-06-20 15:35:13
+  subscription_id: 
+
+two:
+  cb_customer_id: MyString
+  auto_collection: false
+  payment_type: MyString
+  reference_id: MyString
+  card_last4: MyString
+  card_type: MyString
+  status: MyString
+  event_last_modified_at: 2016-06-20 15:35:13
+  subscription_id: 

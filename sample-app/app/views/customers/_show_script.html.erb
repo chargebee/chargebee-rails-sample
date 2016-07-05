@@ -1,0 +1,174 @@
+
+<script type="text/javascript">
+  // Setting the error class and error element for form validation.
+
+  var popup = true;
+
+  // jQuery.validator.setDefaults({
+  //     errorClass: "text-danger",
+  //     errorElement: "small"
+  // });
+    
+  function showProcessing() {
+    $('.subscribe-process').show();
+  }
+
+  function hideProcessing() {
+    $('.subscribe-process').hide();
+  }
+    
+  // Handling and displaying error during form submit.
+  function subscribeErrorHandler(jqXHR, textStatus, errorThrown) {
+    try{
+      var resp = JSON.parse(jqXHR.responseText);
+      if ('error_param' in resp) {
+        var errorMap = {};
+        var errParam = resp.error_param;
+        var errMsg = resp.error_msg;
+        errorMap[errParam] = errMsg;
+        $(".subscribe-form").validate().showErrors(errorMap);
+      } else {
+        var errMsg = resp.error_msg;
+        $(".alert-danger").show().text(errMsg);
+      }
+    } catch(err) {
+      $(".alert-danger").show().text("Error while processing your request");
+    }
+  }
+    
+  // Forward to thank you page after receiving success response.
+  function subscribeResponseHandler(response){
+    if(popup) {
+      subscribeResponsePopupHandler(response);
+    } else {
+      subscribeResponseEmbedHandler(response);
+    }
+  }
+
+    
+  function subscribeResponsePopupHandler(response) {
+    var hostedPageId = response.hosted_page_id;
+    $('.subscribe-process').show();
+    
+    ChargeBee.bootStrapModal(response.url, response.site_name, "paymentModal").load({
+    
+       /**
+        * This function is called once the checkout form is loaded in the popup.
+        */
+       onLoad: function() {
+        console.log('---modal-on-load---')
+        hideProcessing();
+        // $('.submit-btn').attr("disabled", "disabled");
+      },
+        
+        /* This function will be called after subscribe button is clicked 
+         * and checkout is completed in the iframe checkout page.
+         */
+      onSuccess: function() {
+        redirectCall(hostedPageId);
+      },
+        
+        /* This function will be called after cancel button is clicked in 
+         * the iframe checkout page.
+         */
+      onCancel: function() {
+        $(".alert-danger").show().text("Payment Aborted !!");
+        $('.submit-btn').removeAttr("disabled");
+      }
+    });
+  }
+
+  function redirectCall(hostedPageId){
+    window.location.href = "/customers/activate_subscription?hosted_page_id=" + encodeURIComponent(hostedPageId);
+  }
+
+  function subscribeStripeResponseHandler(responseJSON) {
+    window.location.replace(responseJSON.forward);
+  }
+
+  function handleStripeToken(token, args) {
+    form = $("#stripe-subscribe-form");
+    $("input[name='stripeToken']").val(token.id );
+    var options = {
+        beforeSend: showProcessing,
+        // post-submit callback when error returns
+        error: subscribeErrorHandler, 
+        // post-submit callback when success returns
+        success: subscribeStripeResponseHandler, 
+        complete: hideProcessing,
+        contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+        dataType: 'json'
+    };
+    // Doing AJAX form submit to your server.
+    form.ajaxSubmit(options);
+    return false;
+  }
+
+  $(".braintree_content").on("click", function() {
+    $(".braintree-payment").show();
+  })
+    
+            
+  $(document).ready(function() {
+
+    var handler = StripeCheckout.configure({
+      //Replace it with your stripe publishable key
+      key: 'pk_test_4t6IgpgOeMmtBVTNzzf0K1f7',
+      // image: '/assets/images/favicon.png',
+      allowRememberMe: false,
+      token: handleStripeToken
+    });
+
+    var client = new braintree.api.Client({ clientToken : "<%= Braintree::ClientToken.generate %>" });
+
+    $(".subscribe-form").on("submit", function(e) {
+      e.preventDefault();
+      if (this.id == 'hosted-page-subscribe-form') {
+        var options = {
+          beforeSend: showProcessing,
+          error: subscribeErrorHandler, 
+          success: subscribeResponseHandler, 
+          contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+          dataType: 'json'
+        };
+        $(this).ajaxSubmit(options);
+        return false;
+      } else if ( this.id == 'braintree-subscribe-form' ) {
+        client.tokenizeCard({
+          number: $('input[card-info=number]').val(),
+          expirationDate: $('select[card-info=expiry_month]').val()+ "/" + $('select[card-info=expiry_year]').val(),
+          cvv : $('input[card-info=cvv]').val() 
+        },function (err, nonce) {
+          if(err){
+            $(".alert-danger").show().text("Couldn't process your card");
+            hideProcessing();
+            return;
+          }
+          if ($("input[name='braintreeToken']").length == 1) {
+            $("input[name='braintreeToken']").val(nonce);
+          } else {
+            $(".subscribe-form").append("<input type='hidden' name='braintreeToken' value='" + nonce + "' />");
+          }
+          var options = {
+            beforeSend: showProcessing,
+            error: subscribeErrorHandler, 
+            success: subscribeStripeResponseHandler, 
+            complete:  hideProcessing,
+            contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+            dataType: 'json'
+          };
+          $("#braintree-subscribe-form").ajaxSubmit(options);
+          return false;
+        });
+      } else {
+        handler.open({
+          name: "<%= @customer.subscription.plan.name %>",
+          description: "<%= @customer.subscription.plan.name %>" ,
+          amount: "<%= @customer.subscription.plan.chargebee_data['price'] %>" ,
+          email: "<%= @customer.email %>"
+        });
+        return false;
+      }
+    })
+  });
+</script>

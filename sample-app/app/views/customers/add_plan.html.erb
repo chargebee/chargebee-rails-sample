@@ -1,0 +1,141 @@
+
+<div class="navbar navbar-static-top">
+      <div class="container">
+        <div class="navbar-header">          
+          <div class="h1">Update Subscription</div>
+        </div>
+      </div>
+    </div>
+    <div id="container" class="checkout container">                        
+      <div id="customer-info" class="row">
+        <form action="/customers/change_subscription" method="post"  id="subscribe-form">                
+          <div class="col-sm-7" id="checkout_info">
+            <div class="page-header">
+              <h3>Tell us about yourself</h3>
+            </div>
+            <div class="row">
+              <div class="col-sm-6">
+                <div class="form-group">
+                  <label for="customer[first_name]">First Name</label>
+                  <input type="text" class="form-control" name="customer[first_name]" 
+                  maxlength="50" required data-msg-required="cannot be blank" value = '<%= @customer.first_name %>' readonly >
+                  <input id="customer_id" name="customer[id]" value='<%= @customer.id %>' type="hidden" />
+                  <small for="customer[first_name]" class="text-danger"></small>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="form-group">
+                  <label for="customer[last_name]">Last Name</label>
+                  <input type="text" class="form-control" name="customer[last_name]" 
+                  maxlength="50" required data-msg-required="cannot be blank" value = '<%= @customer.last_name %>' readonly>
+                  <small for="customer[last_name]" class="text-danger"></small>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-sm-6">
+                <div class="form-group">
+                  <label for="customer[email]">Email</label>
+                  <input id="email" type="text" class="form-control" name="customer[email]" maxlength="50"
+                  data-rule-required="true" data-rule-email="true" 
+                  data-msg-required="Please enter your email address" 
+                  data-msg-email="Please enter a valid email address" value = '<%= @customer.email %>'readonly >
+                  <small for="customer[email]" class="text-danger"></small>
+                </div>
+              </div>                             
+              <div class="col-sm-6">
+                <div class="form-group">
+                  <label for="customer[phone]">Phone</label>
+                  <input id="phone" type="text" maxlength="10" class="form-control" name="customer[phone]" 
+                  required readonly data-msg-required="cannot be blank" value = '<%= @customer.phone %>'>
+                  <small for="customer[phone]" class="text-danger"></small>
+                </div>
+              </div>                   
+            </div>
+
+            <div class="row">
+              <div class="col-sm-6">
+                <div class="form-group">
+                  <label>Coupons</label>
+                  <% if @coupons && @coupons.length > 0 %>
+                  <% @coupons.each do |subscription_coupon| %>
+                    <% @coupon_list.each do |result| %>
+                      <% if subscription_coupon.coupon_id == result.coupon.id %>
+                        <p><%= result.coupon.name %></p>
+                      <% end %>
+                    <% end %>
+                  <% end %>
+                  <% end %>
+                </div>
+              </div>                          
+            </div>
+                   
+            <hr>                            
+            <p class="text-danger" style="display:none;">There were errors while submitting</p>
+            <div class="form-inline">
+              <div class="form-group">
+                <input type="submit" class="submit-btn btn btn-success btn-md" value="Update">
+              </div>
+              <div class="form-group">
+                <%= link_to "Cancel", customers_path, class: 'btn-primary btn btn-md' %>
+              </div>
+              <div class="form-group">
+                <span class="subscribe-process process" style="display:none;">Processing&hellip;</span>
+              </div>
+              <div class="form-group">
+                <span class="alert-danger text-danger"></span>
+              </div>
+            </div>                        
+          </div>
+          <div class="col-sm-4 cb-order-list col-sm-offset-1">
+            <div class="page-header">
+              <h3>Subscription Details</h3>
+            </div>
+          <div class="col-12">
+            <fieldset class="form-group">  
+              <label for="exampleSelect1">Plan</label>
+              <%= select_tag :plan_id, options_from_collection_for_select(Plan.all, :plan_id, :name, @customer.subscription.plan.plan_id), { include_blank: 'Please Select', class: 'form-control', required: 'required'}  %>
+            </fieldset>
+          </div>
+          <div class="col-12">
+            <fieldset class="form-group">  
+             <label for="exampleSelect1">Coupons</label>
+              <%= select_tag "coupon_id", options_for_select(@coupon_list.collect{ |u| [u.coupon.name, u.coupon.id]}), {:class =>"form-control", :include_blank => "Please Select"} %>
+            </fieldset>
+          </div>
+          <div class="total_value">
+
+          </div>    
+        </form>
+      </div>      
+    </div>
+
+
+<script type="text/javascript">
+  $("#plan_id").on("change", function() {
+    fetchEstimate();    
+  })
+  $("#coupon_id").on("change", function() {
+    fetchEstimate();
+  })
+  function fetchEstimate() {
+    $.ajax({
+      url: '/customers/estimate',
+      type: 'GET',
+      contentType: 'application/json',
+      data: { customer_id: $("#customer_id").val(), plan_id: $("#plan_id").val(), coupon_id: $("#coupon_id").val() }
+    }).done(function(response) {
+      invoice_estimate = response.invoice_estimate
+      subscription_estimate = response.subscription_estimate
+      next_invoice_estimate = response.next_invoice_estimate
+      console.log(invoice_estimate, subscription_estimate, next_invoice_estimate)
+      if (invoice_estimate) {
+        $(".total_value div").remove();
+        $(".total_value").append('<div><p><b>Total:</b> USD '+ invoice_estimate.total/100 +'</p></div>');
+      } else if (next_invoice_estimate) {
+        $(".total_value div").remove();
+        $(".total_value").append('<div><p><b>Next Invoice Estimate:</b> USD '+ invoice_estimate.total/100 +'</p></div>');
+      }
+    });
+  }
+</script>

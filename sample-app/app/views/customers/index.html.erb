@@ -1,0 +1,44 @@
+<div class="col-md-offset-2 col-md-8">
+  <div class="navbar navbar-static-top">
+    <div class="container">
+      <div class="navbar-header">
+        <div class="h1">Customer List</div>
+      </div>
+    </div>
+    <div class="pull-right">
+      <%= link_to "Sign Up without card", new_customer_path %>&nbsp;|&nbsp;
+      <%= link_to "Hosted Page Sign Up", customers_hosted_page_sign_up_path %>&nbsp;|&nbsp;
+      <%= link_to "Stripe or braintree Sign Up", customers_stripe_sign_up_path %>
+    </div>
+  </div>
+  <div id="container" class="checkout container">
+    <div id="customer-info" class="row">
+      <div class="col-sm-7" id="checkout_info">
+        <table class="table table-striped">
+          <thead>
+            <th>Customer</th>
+            <th>Subscription-Plan</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th colspan='2'>Actions</th>
+          </thead>
+          <tbody>
+            <% @customers.each do |customer| %>
+            <tr>
+              <td><%= link_to "#{customer.first_name} #{customer.last_name}", customer_path(customer) %></td>
+              <td><%= customer.subscription.plan.name.titleize %></td>
+              <td>$ <%= customer.subscription.plan.chargebee_data['price'].to_i/100 %></td>
+              <td><%= customer.subscription.status.titleize %></td>
+              <td>
+                <% unless customer.subscription.status == 'in_trial' || customer.subscription.status == 'cancelled' %>
+                  <%= link_to "Update Subscription", add_plan_customer_path(customer), class: "btn btn-sm btn-primary" %>
+                <% end %>
+              </td>
+            </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
